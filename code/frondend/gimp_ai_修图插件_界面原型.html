@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GIMP AI 修图插件 - 2026版</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #1a1a1a;
+    color: #d1d1d1;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* === 通用组件样式 === */
+.gimp-bg { background-color: #2c2c2c; }
+.gimp-border { border-color: #444444; }
+.gimp-hover:hover { background-color: #4a4a4a; }
+.gimp-active { background-color: #3e3e3e; color: #ff9d00; }
+.gimp-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+::-webkit-scrollbar-track { background: #2c2c2c; }
+
+/* 画布透明网格背景 */
+.canvas-bg {
+    background-image: conic-gradient(#333 90deg, #444 90deg 180deg, #333 180deg 270deg, #444 270deg);
+    background-size: 20px 20px;
+}
+
+/* Flex 工具类 */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
+.space-x-1 > * + * { margin-left: 0.25rem; }
+.space-x-2 > * + * { margin-left: 0.5rem; }
+.space-x-3 > * + * { margin-left: 0.75rem; }
+.space-x-4 > * + * { margin-left: 1rem; }
+.space-y-2 > * + * { margin-top: 0.5rem; }
+.space-y-3 > * + * { margin-top: 0.75rem; }
+.space-y-4 > * + * { margin-top: 1rem; }
+.space-y-6 > * + * { margin-top: 1.5rem; }
+.ml-auto { margin-left: auto; }
+.mr-2 { margin-right: 0.5rem; }
+.mr-3 { margin-right: 0.75rem; }
+.mr-4 { margin-right: 1rem; }
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 0.75rem; }
+.mt-auto { margin-top: auto; }
+.p-1 { padding: 0.25rem; }
+.p-1\.5 { padding: 0.375rem; }
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 0.75rem; }
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
+.px-1\.5 { padding-left: 0.375rem; padding-right: 0.375rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.pl-10 { padding-left: 2.5rem; }
+.pr-4 { padding-right: 1rem; }
+.pl-4 { padding-left: 1rem; }
+.text-\[10px\] { font-size: 10px; }
+.text-xs { font-size: 12px; }
+.text-sm { font-size: 14px; }
+.text-base { font-size: 16px; }
+.text-lg { font-size: 18px; }
+.text-xl { font-size: 20px; }
+.font-bold { font-weight: 700; }
+.font-medium { font-weight: 500; }
+.uppercase { text-transform: uppercase; }
+.tracking-wider { letter-spacing: 0.05em; }
+.text-center { text-align: center; }
+.text-neutral-400 { color: #a3a3a3; }
+.text-neutral-500 { color: #737373; }
+.text-neutral-600 { color: #525252; }
+.text-orange-400 { color: #fb923c; }
+.text-orange-500 { color: #f97316; }
+.text-blue-400 { color: #60a5fa; }
+.text-blue-500 { color: #3b82f6; }
+.text-purple-500 { color: #a855f7; }
+.text-green-400 { color: #4ade80; }
+.text-white { color: #ffffff; }
+.text-black { color: #000000; }
+.w-6 { width: 1.5rem; }
+.w-10 { width: 2.5rem; }
+.w-12 { width: 3rem; }
+.w-24 { width: 6rem; }
+.w-48 { width: 12rem; }
+.w-56 { width: 14rem; }
+.w-80 { width: 20rem; }
+.w-\[700px\] { width: 700px; }
+.w-\[800px\] { width: 800px; }
+.w-2 { width: 0.5rem; }
+.w-3\/4 { width: 75%; }
+.w-full { width: 100%; }
+.h-2 { height: 0.5rem; }
+.h-3 { height: 0.75rem; }
+.h-5 { height: 1.25rem; }
+.h-6 { height: 1.5rem; }
+.h-8 { height: 2rem; }
+.h-10 { height: 2.5rem; }
+.h-40 { height: 10rem; }
+.h-80 { height: 20rem; }
+.h-\[400px\] { height: 400px; }
+.h-\[500px\] { height: 500px; }
+.h-full { height: 100%; }
+.h-screen { height: 100vh; }
+.min-h-\[80px\] { min-height: 80px; }
+.rounded { border-radius: 0.25rem; }
+.rounded-sm { border-radius: 0.125rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-full { border-radius: 9999px; }
+.border { border-width: 1px; }
+.border-b { border-bottom-width: 1px; }
+.border-l-2 { border-left-width: 2px; }
+.border-r { border-right-width: 1px; }
+.border-t { border-top-width: 1px; }
+.border-dashed { border-style: dashed; }
+.shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.shadow-inner { box-shadow: inset 0 1px 3px rgba(0,0,0,0.3); }
+.shadow-2xl { box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+.overflow-hidden { overflow: hidden; }
+.overflow-y-auto { overflow-y: auto; }
+.cursor-default { cursor: default; }
+.cursor-pointer { cursor: pointer; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+.top-2 { top: 0.5rem; }
+.top-8 { top: 2rem; }
+.left-0 { left: 0; }
+.left-2 { left: 0.5rem; }
+.left-3 { left: 0.75rem; }
+.right-2 { right: 0.5rem; }
+.bottom-2 { bottom: 0.5rem; }
+.z-50 { z-index: 50; }
+.z-\[100\] { z-index: 100; }
+.z-\[200\] { z-index: 200; }
+.opacity-0 { opacity: 0; }
+.opacity-70 { opacity: 0.7; }
+.bg-\[\#121212\] { background-color: #121212; }
+.bg-black { background-color: #000000; }
+.bg-black\/50 { background-color: rgba(0,0,0,0.5); }
+.bg-black\/70 { background-color: rgba(0,0,0,0.7); }
+.bg-neutral-700 { background-color: #404040; }
+.bg-neutral-700\/30 { background-color: rgba(64,64,64,0.3); }
+.bg-neutral-800 { background-color: #262626; }
+.bg-neutral-800\/50 { background-color: rgba(38,38,38,0.5); }
+.bg-neutral-800\/80 { background-color: rgba(38,38,38,0.8); }
+.bg-neutral-900 { background-color: #171717; }
+.bg-orange-500 { background-color: #f97316; }
+.bg-orange-500\/20 { background-color: rgba(249,115,22,0.2); }
+.bg-orange-600 { background-color: #ea580c; }
+.bg-orange-600\/20 { background-color: rgba(234,88,12,0.2); }
+.bg-blue-500\/20 { background-color: rgba(59,130,246,0.2); }
+.bg-purple-500\/20 { background-color: rgba(168,85,247,0.2); }
+.bg-neutral-500 { background-color: #737373; }
+.border-neutral-700 { border-color: #404040; }
+.border-orange-500 { border-color: #f97316; }
+.border-blue-500 { border-color: #3b82f6; }
+.border-purple-500 { border-color: #a855f7; }
+.border-white { border-color: #ffffff; }
+.text-\[11px\] { font-size: 11px; }
+.italic { font-style: italic; }
+.leading-relaxed { line-height: 1.625; }
+.resize-none { resize: none; }
+.outline-none { outline: none; }
+.transition-all { transition: all 0.3s; }
+.transition-colors { transition: color 0.2s, background-color 0.2s; }
+.transition-transform { transition: transform 0.2s; }
+.transition-opacity { transition: opacity 0.2s; }
+.duration-300 { transition-duration: 0.3s; }
+.duration-500 { transition-duration: 0.5s; }
+.animate-pulse { animation: pulse 2s infinite; }
+.grid { display: grid; }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.gap-4 { gap: 1rem; }
+.aspect-square { aspect-ratio: 1/1; }
+.hidden { display: none; }
+.block { display: block; }
+.object-cover { object-fit: cover; }
+.object-contain { object-fit: contain; }
+.group:hover .group-hover\:opacity-100 { opacity: 1; }
+.group:hover .group-hover\:scale-110 { transform: scale(1.1); }
+.group:hover .group-hover\:bg-orange-500 { background-color: #f97316; }
+.backdrop-blur-sm { backdrop-filter: blur(4px); }
+.hover\:scale-105:hover { transform: scale(1.05); }
+.focus\:border-orange-500:focus { border-color: #f97316; }
+.hover\:bg-orange-700:hover { background-color: #c2410c; }
+.left-1\/2 { left: 50%; }
+.top-1\/2 { top: 50%; }
+.-translate-x-1\/2 { transform: translateX(-50%); }
+.-translate-y-1\/2 { transform: translateY(-50%); }
+.flex-shrink-0 { flex-shrink: 0; }
+
+/* 渐变和特殊效果 */
+.bg-gradient-to-t { background: linear-gradient(to top, var(--tw-gradient-stops)); }
+.from-black\/80 { --tw-gradient-from: rgba(0,0,0,0.8); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.to-transparent { --tw-gradient-to: transparent; }
+.bg-gradient-to-r { background: linear-gradient(to right, var(--tw-gradient-stops)); }
+.from-orange-600 { --tw-gradient-from: #ea580c; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.to-yellow-500 { --tw-gradient-to: #eab308; }
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* 按钮样式 */
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    border: none;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+.btn:hover { opacity: 0.9; }
+.btn-orange { background-color: #ea580c; color: white; }
+.btn-gray { background-color: #404040; color: #d1d1d1; }
+.btn-orange:hover { background-color: #c2410c; }
+.btn-gray:hover { background-color: #525252; }
+
+/* 输入框 */
+.input {
+    background-color: #171717;
+    border: 1px solid #444444;
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    color: #d1d1d1;
+    font-size: 12px;
+    width: 100%;
+}
+.input:focus { outline: none; border-color: #ea580c; }
+
+/* 标签 */
+.tag {
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.tag-active { background-color: #ea580c; color: white; }
+.tag-inactive { background-color: #404040; color: #d1d1d1; }
+.tag-inactive:hover { background-color: #525252; }
+
+/* 卡片 */
+.card {
+    background-color: #262626;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid #404040;
+}
+.card:hover { border-color: #525252; }
+
+/* 步骤卡片 */
+.step-item {
+    background-color: #262626;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    border-left: 2px solid;
+}
+.step-item:hover { background-color: #303030; }
+.step-number {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+}
+.step-orange { border-color: #f97316; }
+.step-orange .step-number { background-color: rgba(249,115,22,0.2); color: #f97316; }
+.step-blue { border-color: #3b82f6; }
+.step-blue .step-number { background-color: rgba(59,130,246,0.2); color: #3b82f6; }
+.step-purple { border-color: #a855f7; }
+.step-purple .step-number { background-color: rgba(168,85,247,0.2); color: #a855f7; }
+.step-green { border-color: #22c55e; }
+.step-green .step-number { background-color: rgba(34,197,94,0.2); color: #22c55e; }
+.step-red { border-color: #ef4444; }
+.step-red .step-number { background-color: rgba(239,68,68,0.2); color: #ef4444; }
+
+/* 雷达图容器 */
+#radar-chart-container {
+    width: 100%;
+    height: 10rem;
+    position: relative;
+}
+
+/* 工具提示 */
+.tooltip {
+    position: absolute;
+    background: #262626;
+    border: 1px solid #444;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* 保存方案弹窗 */
+.save-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+}
+.save-modal.hidden {
+    display: none !important;
+}
+
+/* 灵感库弹窗隐藏 */
+#inspiration-modal.hidden {
+    display: none !important;
+}
+}
+.save-modal-content {
+    background: #262626;
+    border: 1px solid #444;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    width: 400px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+}
+.save-modal input {
+    margin-top: 1rem;
+}
+
+/* 步骤文本框右键菜单 */
+.context-menu {
+    position: fixed;
+    background: #262626;
+    border: 1px solid #444;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0;
+    min-width: 150px;
+    z-index: 250;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+.context-menu-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 12px;
+}
+.context-menu-item:hover { background: #404040; }
+.context-menu-divider { height: 1px; background: #444; margin: 0.25rem 0; }
+
+/* 工具直达弹窗 */
+.tool-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+}
+.tool-modal.hidden {
+    display: none !important;
+}
+.tool-modal-content {
+    background: #262626;
+    border: 1px solid #444;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    width: 500px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+}
+.tool-preview {
+    background: #171717;
+    border: 1px solid #444;
+    border-radius: 0.25rem;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1rem 0;
+}
+.slider {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: #404040;
+    border-radius: 2px;
+    outline: none;
+}
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ea580c;
+    cursor: pointer;
+}
+
+/* 动画 */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+.modal-animate { animation: fadeIn 0.2s ease-out; }
+
+/* 灵感库网格 */
+.inspiration-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+.inspiration-card {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid #404040;
+    position: relative;
+    cursor: pointer;
+    aspect-ratio: 1;
+}
+.inspiration-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+.inspiration-card:hover img { transform: scale(1.1); }
+.inspiration-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+.inspiration-card-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #171717;
+    color: #737373;
+}
+
+/* 选择状态 */
+.selected { border-color: #ea580c !important; box-shadow: 0 0 0 2px rgba(234,88,12,0.3); }
+</style>
+</head>
+<body>
+<!-- 1. 顶部菜单栏 -->
+<header class="gimp-bg h-8 border-b gimp-border flex items-center px-2 text-xs z-50">
+    <div class="flex items-center space-x-1 mr-4">
+        <svg class="w-5 h-5 opacity-80" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#4a4a4a"/>
+            <path d="M8 12h8M12 8v8" stroke="#ff9d00" stroke-width="2"/>
+        </svg>
+    </div>
+    <nav class="flex space-x-3 h-full">
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">文件</div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">编辑</div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">选择</div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">视图</div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">图像</div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">图层</div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">颜色</div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">工具</div>
+        <!-- 滤镜下拉 -->
+        <div class="relative group h-full">
+            <div class="px-2 h-full flex items-center gimp-hover gimp-active cursor-default">滤镜</div>
+            <div class="absolute top-8 left-0 w-56 gimp-bg border gimp-border gimp-shadow hidden group-hover:block py-1">
+                <div class="px-4 py-1.5 gimp-hover flex justify-between"><span>重复上一次</span><span class="text-neutral-500 italic">Ctrl+F</span></div>
+                <div class="border-b gimp-border my-1"></div>
+                <div class="px-4 py-1.5 gimp-hover">模糊</div>
+                <div class="px-4 py-1.5 gimp-hover">增强</div>
+                <div class="px-4 py-1.5 gimp-hover">扭曲</div>
+                <div class="px-4 py-1.5 gimp-hover">艺术效果</div>
+                <div class="px-4 py-1.5 bg-orange-600 text-white flex items-center justify-between cursor-pointer" onclick="toggleAIPanel()">
+                    <div class="flex items-center">
+                        <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2M7.5 13A2.5 2.5 0 005 15.5A2.5 2.5 0 007.5 18a2.5 2.5 0 002.5-2.5A2.5 2.5 0 007.5 13m9 0a2.5 2.5 0 00-2.5 2.5a2.5 2.5 0 002.5 2.5a2.5 2.5 0 002.5-2.5a2.5 2.5 0 00-2.5-2.5z"/>
+                        </svg>
+                        AI 修图插件
+                    </div>
+                    <span class="text-[10px] opacity-70">2026</span>
+                </div>
+                <div class="px-4 py-1.5 gimp-hover">地图</div>
+                <div class="px-4 py-1.5 gimp-hover">网页</div>
+            </div>
+        </div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">窗口</div>
+        <div class="px-2 h-full flex items-center gimp-hover cursor-default">帮助</div>
+    </nav>
+    <div class="ml-auto text-neutral-500 text-[10px]">GIMP 3.12.0 (AI Edition) - 2026/04/11</div>
+</header>
+
+<!-- 主容器 -->
+<main class="flex-1 flex overflow-hidden">
+    <!-- 左侧工具栏 -->
+    <aside class="w-12 gimp-bg border-r gimp-border flex flex-col items-center py-2 space-y-4">
+        <div class="p-1.5 gimp-active rounded shadow-inner cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+            </svg>
+        </div>
+        <div class="p-1.5 gimp-hover rounded cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+            </svg>
+        </div>
+        <div class="p-1.5 gimp-hover rounded cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12c0-4 4-8 9-8s9 4 9 8-4 8-9 8"/>
+            </svg>
+        </div>
+        <div class="p-1.5 gimp-hover rounded cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+            </svg>
+        </div>
+        <div class="p-1.5 gimp-hover rounded cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 20H7L3 16l9-13 7.5 7.5-4.5 5.5"/>
+            </svg>
+        </div>
+        <div class="p-1.5 gimp-hover rounded cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>
+            </svg>
+        </div>
+        <div class="p-1.5 gimp-hover rounded cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v6M12 22v-6M2 12h6M22 12h-6"/>
+            </svg>
+        </div>
+        <div class="p-1.5 gimp-hover rounded cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+        </div>
+        <div class="p-1.5 gimp-hover rounded text-orange-400 cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L9 9l-7 1 5 5-1 7 6-3 6 3-1-7 5-5-7-1-3-7z"/>
+            </svg>
+        </div>
+        <div class="mt-auto mb-4 flex flex-col items-center space-y-2">
+            <div class="w-6 h-6 bg-black border border-white"></div>
+            <div class="w-6 h-6 bg-white border border-black -mt-3 ml-3"></div>
+        </div>
+    </aside>
+
+    <!-- 中间画布区 -->
+    <section class="flex-1 relative overflow-hidden flex items-center justify-center p-8 bg-[#121212]" oncontextmenu="showCanvasContextMenu(event)">
+        <div class="canvas-bg w-[800px] h-[500px] shadow-2xl relative border border-neutral-700">
+            <!-- 选照片 -->
+            <img alt="Editing Image" class="w-full h-full object-cover" src="https://kkimgs.yisou.com/ims?kt=url&at=ori&key=aHR0cHM6Ly9pMC5oZHNsYi5jb20vYmZzL2FydGljbGUvNmE0Zjc3MjY3M2RlNmMzNWFmNzA3OTY0OTAzNmY3Y2Q1NzVlMmQ5NC5qcGdAMTI1NndfMTc5NmhfIXdlYi1hcnRpY2xlLXBpYy53ZWJw&sign=yx:I_G4PH4pJPFQHrWbvY2g289Vaj0=&tv=0_0"/>
+            <!-- 画布状态 -->
+            <div class="absolute bottom-2 left-2 bg-black/50 px-2 py-0.5 text-[10px] rounded">12.5% 1920x1080px (RGB 16-bit)</div>
+        </div>
+        
+        <!-- 画布右键上下文菜单 -->
+        <div class="fixed hidden w-48 gimp-bg border gimp-border gimp-shadow z-[100] py-1 text-sm" id="canvas-context-menu">
+            <div class="px-3 py-1.5 gimp-hover flex items-center text-orange-400 cursor-pointer">
+                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                AI 智能补全
+            </div>
+            <div class="px-3 py-1.5 gimp-hover flex items-center cursor-pointer">
+                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                复制图层
+            </div>
+            <div class="px-3 py-1.5 gimp-hover flex items-center cursor-pointer">
+                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+                </svg>
+                作为新图层粘贴
+            </div>
+            <div class="border-b gimp-border my-1"></div>
+            <div class="px-3 py-1.5 gimp-hover flex items-center text-blue-400 cursor-pointer">
+                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 3l1.5 4.5H18l-3.5 3 1.5 4.5L12 12l-4 3 1.5-4.5-3.5-3h4.5L12 3z"/>
+                </svg>
+                AI 语义选区
+            </div>
+            <div class="px-3 py-1.5 gimp-hover flex items-center cursor-pointer">
+                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+                隐藏此区域
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. 右侧边栏主控制面板 -->
+    <aside class="w-80 gimp-bg border-l gimp-border flex flex-col h-full transition-all duration-300" id="ai-panel">
+        <!-- 面板头部 -->
+        <div class="p-3 border-b gimp-border flex items-center justify-between bg-neutral-800/50">
+            <div class="flex items-center font-bold text-sm">
+                <svg class="text-orange-400 mr-2 w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2M7.5 13A2.5 2.5 0 005 15.5A2.5 2.5 0 007.5 18a2.5 2.5 0 002.5-2.5A2.5 2.5 0 007.5 13m9 0a2.5 2.5 0 00-2.5 2.5a2.5 2.5 0 002.5 2.5a2.5 2.5 0 002.5-2.5a2.5 2.5 0 00-2.5-2.5z"/>
+                </svg>
+                AI 智能修图助手
+            </div>
+            <div class="flex space-x-1">
+                <button class="p-1 gimp-hover rounded cursor-pointer">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+                    </svg>
+                </button>
+                <button class="p-1 gimp-hover rounded cursor-pointer" onclick="toggleAIPanel()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 面板内容滚动区 -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-6">
+            <!-- 3. AI智能修图按钮和诊断报告区域 -->
+            <section class="space-y-3">
+                <button class="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm font-medium flex items-center justify-center transition-colors cursor-pointer" onclick="runDiagnosis()">
+                    <svg class="mr-2 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
+                    </svg>
+                    AI 智能修图
+                </button>
+                <div class="bg-black/20 rounded-lg p-3 border border-neutral-700 hidden" id="diagnosis-container">
+                    <div class="text-[11px] text-neutral-400 mb-2 uppercase tracking-wider font-bold">诊断报告</div>
+                    <!-- 雷达图 -->
+                    <div id="radar-chart-container">
+                        <canvas id="radar-chart"></canvas>
+                    </div>
+                    <div class="space-y-2 mt-2">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-neutral-400">整体健康度:</span>
+                            <span class="text-green-400 font-bold" id="health-score">84%</span>
+                        </div>
+                        <div class="text-[11px] text-neutral-300 leading-relaxed bg-neutral-700/30 p-2 rounded">
+                            <svg class="text-blue-400 align-middle mr-1 inline-block w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                            </svg>
+                            检测到前背景分离度良好，但中性色温略微偏蓝（4200K），建议通过"冷暖平衡"进行校正。高频噪点集中在暗部。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. 自然语言输入框 -->
+            <section class="space-y-2">
+                <label class="text-[11px] text-neutral-400 uppercase font-bold">AI 指令中心</label>
+                <div class="relative">
+                    <textarea id="ai-input" class="w-full bg-neutral-900 border gimp-border rounded p-3 text-xs focus:outline-none focus:border-orange-500 min-h-[80px] resize-none" placeholder="例如：把天空变成黄昏，增强肤色质感，移除左下角的杂物..."></textarea>
+                    <button class="absolute bottom-2 right-2 p-1.5 bg-orange-600 rounded text-white hover:scale-105 transition-transform cursor-pointer" onclick="generateSteps()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 5. 修图步骤列表 - 可右键 -->
+            <section class="space-y-3" id="steps-section">
+                <div class="flex items-center justify-between">
+                    <label class="text-[11px] text-neutral-400 uppercase font-bold">智能建议步骤</label>
+                    <span class="text-[10px] bg-neutral-700 px-1.5 py-0.5 rounded" id="step-count">0 步可用</span>
+                </div>
+                <div class="space-y-2" id="steps-container" oncontextmenu="showStepsContextMenu(event)">
+                    <!-- 动态生成的步骤会在这里 -->
+                </div>
+                <!-- 空状态提示 -->
+                <div class="text-center py-8 text-neutral-500 text-xs" id="steps-empty">
+                    <svg class="w-8 h-8 mx-auto mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    输入修图需求，AI 将生成具体步骤
+                </div>
+            </section>
+
+            <!-- 7. 灵感库按钮 -->
+            <button class="w-full py-6 border-2 border-dashed gimp-border rounded-lg gimp-hover flex flex-col items-center justify-center space-y-2 group cursor-pointer" onclick="toggleInspiration()">
+                <div class="w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center group-hover:bg-orange-500 transition-colors">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 017 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/>
+                    </svg>
+                </div>
+                <span class="text-xs font-medium">打开 AI 灵感库</span>
+                <span class="text-[10px] text-neutral-500 text-center px-4">探索全球摄影师生成的 AI 风格预设</span>
+            </button>
+        </div>
+        
+        <!-- 底部状态反馈 -->
+        <div class="p-2 border-t gimp-border flex items-center space-x-2 bg-neutral-800/80">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-[10px] text-neutral-400">AI 服务在线: 响应延迟 <span id="ai-latency">12</span>ms</span>
+        </div>
+    </aside>
+</main>
+
+<!-- 底部状态栏 -->
+<footer class="gimp-bg h-6 border-t gimp-border flex items-center px-4 text-[10px] text-neutral-400">
+    <div class="flex space-x-4 border-r gimp-border pr-4 mr-4 h-full items-center">
+        <span>[1920 x 1080 px]</span>
+        <span>72.00 ppi</span>
+    </div>
+    <div class="flex items-center space-x-2">
+        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2 20h20v-4H2v4zm2-3h16v3H4v-3zm0-4h16v3H4v-3zm4-8h8v3H8V5z"/>
+        </svg>
+        <span>内存占用: 1.2 GB / 32.0 GB</span>
+    </div>
+    <div class="ml-auto flex items-center space-x-4">
+        <span>矩形选择区域: 0, 0 (800 x 500)</span>
+        <div class="w-24 h-3 bg-neutral-700 rounded-sm overflow-hidden border gimp-border">
+            <div class="w-3/4 h-full bg-neutral-500"></div>
+        </div>
+    </div>
+</footer>
+
+<!-- 灵感库弹窗界面 -->
+<div class="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 hidden backdrop-blur-sm" id="inspiration-modal" onclick="if(event.target === this) toggleInspiration();">
+    <div class="w-[700px] bg-neutral-800 rounded-xl overflow-hidden gimp-shadow border gimp-border modal-animate" onclick="event.stopPropagation();">
+        <div class="p-4 border-b gimp-border flex items-center justify-between">
+            <div class="flex items-center">
+                <svg class="text-orange-400 mr-2 w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+                <h3 class="font-bold">AI 风格灵感库 <span class="text-xs font-normal text-neutral-500 ml-2">2026 春季趋势版</span></h3>
+            </div>
+            <button class="text-neutral-400 hover:text-white cursor-pointer" onclick="toggleInspiration()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6">
+            <!-- 搜索和分类 -->
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="flex-1 relative">
+                    <svg class="absolute left-3 top-2.5 text-neutral-500 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="w-full bg-neutral-900 border gimp-border rounded-lg py-2 pl-10 pr-4 text-sm outline-none focus:border-orange-500 input" placeholder="搜索风格名称或氛围感描述..." type="text"/>
+                </div>
+                <div class="flex space-x-2">
+                    <span class="px-3 py-1.5 bg-orange-600 rounded-full text-xs cursor-pointer tag-active">全部</span>
+                    <span class="px-3 py-1.5 bg-neutral-700 rounded-full text-xs cursor-pointer tag-inactive">人像</span>
+                    <span class="px-3 py-1.5 bg-neutral-700 rounded-full text-xs cursor-pointer tag-inactive">赛博朋克</span>
+                    <span class="px-3 py-1.5 bg-neutral-700 rounded-full text-xs cursor-pointer tag-inactive">自然</span>
+                </div>
+            </div>
+            <!-- 风格网格 -->
+            <div class="inspiration-grid" id="inspiration-grid">
+                <!-- 风格卡片会动态生成 -->
+            </div>
+        </div>
+        <div class="p-4 bg-neutral-900 border-t gimp-border flex justify-end space-x-3">
+            <button class="px-4 py-2 text-xs gimp-hover rounded border gimp-border cursor-pointer" onclick="toggleInspiration()">取消</button>
+            <button class="px-6 py-2 text-xs bg-orange-600 rounded text-white hover:bg-orange-700 cursor-pointer" onclick="applyInspiration()">应用当前风格</button>
+        </div>
+    </div>
+</div>
+
+<!-- 步骤右键菜单 -->
+<div class="context-menu hidden" id="steps-context-menu">
+    <div class="context-menu-item text-red-400" onclick="deleteSteps()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+        </svg>
+        删除该方案
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item text-orange-400" onclick="saveToInspiration()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+        </svg>
+        添加至灵感库
+    </div>
+</div>
+
+<!-- 保存方案弹窗 -->
+<div class="save-modal hidden" id="save-modal" onclick="if(event.target === this) closeSaveModal();">
+    <div class="save-modal-content modal-animate" onclick="event.stopPropagation();">
+        <h4 class="font-bold text-sm mb-2">保存至灵感库</h4>
+        <p class="text-xs text-neutral-400">为你的修图方案起一个名字</p>
+        <input class="input mt-2" id="save-name" placeholder="例如：落日人像美颜方案" type="text"/>
+        <div class="flex justify-end space-x-2 mt-4">
+            <button class="px-4 py-2 text-xs gimp-hover rounded border gimp-border cursor-pointer" onclick="closeSaveModal()">取消</button>
+            <button class="px-4 py-2 text-xs bg-orange-600 rounded text-white cursor-pointer" onclick="confirmSave()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 工具直达弹窗 -->
+<div class="tool-modal hidden" id="tool-modal" onclick="if(event.target === this) closeToolModal();">
+    <div class="tool-modal-content modal-animate" onclick="event.stopPropagation();">
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="font-bold text-sm" id="tool-title">曲线工具</h4>
+            <button class="text-neutral-400 hover:text-white cursor-pointer p-1" onclick="event.stopPropagation(); closeToolModal();">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="tool-preview" id="tool-preview">
+            <svg width="80" height="80" viewBox="0 0 100 100" fill="none" stroke="#666" stroke-width="2">
+                <line x1="0" y1="100" x2="100" y2="0"/>
+                <path id="curve-path" d="M10 90 Q50 50 90 10" stroke="#ff9d00" stroke-width="3" fill="none"/>
+            </svg>
+        </div>
+        <div class="space-y-3 mt-4">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-neutral-400">预设强度</span>
+                    <span class="text-orange-400" id="strength-value">65%</span>
+                </div>
+                <input type="range" class="slider" min="0" max="100" value="65" id="strength-slider" oninput="updateStrength(this.value)">
+            </div>
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-neutral-400">Gamma 值</span>
+                    <span class="text-orange-400">1.2</span>
+                </div>
+                <input type="range" class="slider" min="0" max="200" value="120">
+            </div>
+        </div>
+        <div class="flex justify-end space-x-2 mt-6">
+            <button class="px-4 py-2 text-xs gimp-hover rounded border gimp-border cursor-pointer" onclick="closeToolModal()">取消</button>
+            <button class="px-4 py-2 text-xs bg-orange-600 rounded text-white cursor-pointer" onclick="applyTool()">应用并关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== 全局状态 =====
+let currentSteps = [];
+let savedInspirations = [];
+let selectedInspiration = null;
+let radarChartDrawn = false;
+
+// ===== 灵感库数据 =====
+const inspirationData = [
+    { id: 1, name: '妹桑', desc: '1', img: 'https://i0.hdslb.com/bfs/article/dd8009b637dd0cd1bc31568c815ab99bf444e3ab.jpg@1256w_1796h_!web-article-pic.avif' },
+    { id: 2, name: '马桑', desc: '2', img: 'https://i0.hdslb.com/bfs/article/bb6c29fb40be482c33297f474f06b6b61ee8ca0e.jpg@1256w_1796h_!web-article-pic.avif' },
+    { id: 3, name: '🍋桑', desc: '3', img: 'https://i0.hdslb.com/bfs/article/cf8b867ca4f3ca56c6eb7c55263065d1d930fa0e.jpg@1256w_1796h_!web-article-pic.avif' },
+    { id: 4, name: '学姐桑', desc: '4', img: 'https://i0.hdslb.com/bfs/article/c9af4f6923429748a23d74825e404700f6a45cdb.jpg@1256w_1796h_!web-article-pic.avif' },
+    { id: 5, name: '迫害', desc: '5', img: 'https://i0.hdslb.com/bfs/article/8cd8ee17a48a28c298620318c4db489fc17ccff4.jpg@1256w_1796h_!web-article-pic.avif' },
+];
+
+// ===== 诊断功能 =====
+function runDiagnosis() {
+    const container = document.getElementById('diagnosis-container');
+    container.classList.remove('hidden');
+    
+    if (!radarChartDrawn) {
+        drawRadarChart();
+        radarChartDrawn = true;
+    }
+    
+    // 模拟延迟更新
+    document.getElementById('ai-latency').textContent = Math.floor(Math.random() * 20 + 10);
+}
+
+function drawRadarChart() {
+    const canvas = document.getElementById('radar-chart');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    
+    // 设置 canvas 尺寸
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.scale(dpr, dpr);
+    
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const radius = Math.min(centerX, centerY) - 20;
+    
+    // 指标数据
+    const indicators = [
+        { name: '曝光', value: 75 },
+        { name: '构图', value: 90 },
+        { name: '动态范围', value: 60 },
+        { name: '色彩', value: 85 },
+        { name: '清晰度', value: 95 }
+    ];
+    
+    const angleStep = (Math.PI * 2) / indicators.length;
+    
+    // 绘制背景网格
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let level = 1; level <= 4; level++) {
+        ctx.beginPath();
+        for (let i = 0; i <= indicators.length; i++) {
+            const angle = i * angleStep - Math.PI / 2;
+            const r = radius * level / 4;
+            const x = centerX + r * Math.cos(angle);
+            const y = centerY + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+    }
+    
+    // 绘制轴线
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    for (let i = 0; i < indicators.length; i++) {
+        const angle = i * angleStep - Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle));
+        ctx.stroke();
+    }
+    
+    // 绘制标签
+    ctx.fillStyle = '#888';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < indicators.length; i++) {
+        const angle = i * angleStep - Math.PI / 2;
+        const x = centerX + (radius + 15) * Math.cos(angle);
+        const y = centerY + (radius + 15) * Math.sin(angle);
+        ctx.fillText(indicators[i].name, x, y);
+    }
+    
+    // 绘制数据区域
+    ctx.beginPath();
+    for (let i = 0; i < indicators.length; i++) {
+        const angle = i * angleStep - Math.PI / 2;
+        const r = radius * indicators[i].value / 100;
+        const x = centerX + r * Math.cos(angle);
+        const y = centerY + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255, 157, 0, 0.3)';
+    ctx.fill();
+    ctx.strokeStyle = '#ff9d00';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 绘制数据点
+    ctx.fillStyle = '#ff9d00';
+    for (let i = 0; i < indicators.length; i++) {
+        const angle = i * angleStep - Math.PI / 2;
+        const r = radius * indicators[i].value / 100;
+        const x = centerX + r * Math.cos(angle);
+        const y = centerY + r * Math.sin(angle);
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// ===== 步骤生成 =====
+function generateSteps() {
+    const input = document.getElementById('ai-input').value.trim();
+    if (!input) {
+        alert('请输入修图需求');
+        return;
+    }
+    
+    // 模拟 AI 生成步骤
+    currentSteps = [
+        { id: 1, title: '色温/色调调整', desc: '将色温调整为暖色调 (+15%)', tool: '色温工具', color: 'orange' },
+        { id: 2, title: '曲线调整', desc: '增加对比度，提亮阴影', tool: '曲线', color: 'blue' },
+        { id: 3, title: '皮肤磨皮', desc: '使用频率分离进行柔和磨皮', tool: '频率分离', color: 'purple' },
+        { id: 4, title: '锐化处理', desc: '边缘锐化增强五官立体感', tool: 'USM锐化', color: 'green' },
+    ];
+    
+    renderSteps();
+    updateLatency();
+}
+
+function renderSteps() {
+    const container = document.getElementById('steps-container');
+    const emptyEl = document.getElementById('steps-empty');
+    const countEl = document.getElementById('step-count');
+    
+    if (currentSteps.length === 0) {
+        container.innerHTML = '';
+        emptyEl.style.display = 'block';
+        countEl.textContent = '0 步可用';
+        return;
+    }
+    
+    emptyEl.style.display = 'none';
+    countEl.textContent = currentSteps.length + ' 步可用';
+    
+    container.innerHTML = currentSteps.map((step, index) => `
+        <div class="step-item step-${step.color}">
+            <div class="step-number">${String(index + 1).padStart(2, '0')}</div>
+            <div class="flex-1">
+                <div class="text-xs font-medium">${step.title}</div>
+                <div class="text-[10px] text-neutral-500">${step.desc}</div>
+            </div>
+            <button class="opacity-0 group-hover:opacity-100 p-1 gimp-hover rounded text-neutral-400 transition-opacity cursor-pointer" title="直达工具: ${step.tool}" onclick="openTool('${step.tool}')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+function updateLatency() {
+    const latency = Math.floor(Math.random() * 30 + 10);
+    document.getElementById('ai-latency').textContent = latency;
+}
+
+// ===== 灵感库 =====
+function toggleInspiration() {
+    const modal = document.getElementById('inspiration-modal');
+    modal.classList.toggle('hidden');
+    if (!modal.classList.contains('hidden')) {
+        renderInspirationGrid();
+    }
+}
+
+function renderInspirationGrid() {
+    const grid = document.getElementById('inspiration-grid');
+    
+    let html = inspirationData.map(item => `
+        <div class="inspiration-card ${selectedInspiration === item.id ? 'selected' : ''}" onclick="selectInspiration(${item.id})">
+            <img src="${item.img}" alt="${item.name}" loading="lazy"/>
+            <div class="inspiration-card-overlay">
+                <span class="text-xs font-bold">${item.name}</span>
+                <span class="text-[10px] text-neutral-400">${item.desc}</span>
+            </div>
+        </div>
+    `).join('');
+    
+    // 添加自定义上传卡片
+    html += `
+        <div class="inspiration-card inspiration-card-add">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+            <div class="text-[10px] mt-1">上传训练模型</div>
+        </div>
+    `;
+    
+    // 添加用户保存的灵感
+    savedInspirations.forEach(item => {
+        html += `
+            <div class="inspiration-card ${selectedInspiration === item.id ? 'selected' : ''}" onclick="selectInspiration(${item.id})">
+                <div class="w-full h-full bg-gradient-to-br from-orange-600 to-yellow-500 flex items-center justify-center">
+                    <span class="text-white text-xs font-bold text-center px-2">${item.name}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    grid.innerHTML = html;
+}
+
+function selectInspiration(id) {
+    selectedInspiration = id;
+    renderInspirationGrid();
+}
+
+function applyInspiration() {
+    if (!selectedInspiration) {
+        alert('请选择一个风格');
+        return;
+    }
+    
+    // 模拟应用风格并生成步骤
+    const inspiration = inspirationData.find(i => i.id === selectedInspiration);
+    if (inspiration) {
+        document.getElementById('ai-input').value = `应用风格: ${inspiration.name} - ${inspiration.desc}`;
+        generateSteps();
+    }
+    
+    toggleInspiration();
+}
+
+// ===== 步骤右键菜单 =====
+function showStepsContextMenu(e) {
+    if (currentSteps.length === 0) return;
+    e.preventDefault();
+    const menu = document.getElementById('steps-context-menu');
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+    menu.classList.remove('hidden');
+}
+
+function hideContextMenu() {
+    document.getElementById('steps-context-menu').classList.add('hidden');
+}
+
+function deleteSteps() {
+    currentSteps = [];
+    renderSteps();
+    hideContextMenu();
+}
+
+function saveToInspiration() {
+    hideContextMenu();
+    document.getElementById('save-modal').classList.remove('hidden');
+    document.getElementById('save-name').focus();
+}
+
+function closeSaveModal() {
+    document.getElementById('save-modal').classList.add('hidden');
+}
+
+function confirmSave() {
+    const name = document.getElementById('save-name').value.trim();
+    if (!name) {
+        alert('请输入方案名称');
+        return;
+    }
+    
+    savedInspirations.push({
+        id: Date.now(),
+        name: name,
+        desc: currentSteps.map(s => s.title).join(' → ')
+    });
+    
+    closeSaveModal();
+    document.getElementById('save-name').value = '';
+    alert('已保存至灵感库！');
+}
+
+// ===== 工具直达 =====
+function openTool(toolName) {
+    document.getElementById('tool-title').textContent = toolName;
+    document.getElementById('tool-modal').classList.remove('hidden');
+}
+
+function closeToolModal() {
+    document.getElementById('tool-modal').classList.add('hidden');
+}
+
+function updateStrength(value) {
+    document.getElementById('strength-value').textContent = value + '%';
+    
+    // 更新曲线预览
+    const curvePath = document.getElementById('curve-path');
+    if (curvePath) {
+        const y = 100 - value;
+        curvePath.setAttribute('d', `M10 90 Q50 ${50 + (50 - y) * 0.4} ${90 - value * 0.8} 10`);
+    }
+}
+
+function applyTool() {
+    closeToolModal();
+    updateLatency();
+    // 模拟应用效果
+    alert('已应用工具设置');
+}
+
+// ===== 面板切换 =====
+function toggleAIPanel() {
+    const panel = document.getElementById('ai-panel');
+    if (panel.classList.contains('w-80')) {
+        panel.classList.remove('w-80');
+        panel.classList.add('w-0');
+        panel.classList.add('opacity-0');
+        panel.style.overflow = 'hidden';
+    } else {
+        panel.classList.remove('w-0');
+        panel.classList.add('w-80');
+        panel.classList.remove('opacity-0');
+        panel.style.overflow = '';
+    }
+}
+
+// ===== 画布右键菜单 =====
+function showCanvasContextMenu(e) {
+    e.preventDefault();
+    const menu = document.getElementById('canvas-context-menu');
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+    menu.classList.remove('hidden');
+}
+
+// ===== 全局点击关闭菜单 =====
+document.addEventListener('click', function(e) {
+    // 关闭画布右键菜单
+    const canvasMenu = document.getElementById('canvas-context-menu');
+    if (!canvasMenu.contains(e.target)) {
+        canvasMenu.classList.add('hidden');
+    }
+    
+    // 关闭步骤右键菜单
+    const stepsMenu = document.getElementById('steps-context-menu');
+    if (!stepsMenu.contains(e.target)) {
+        stepsMenu.classList.add('hidden');
+    }
+});
+
+// ===== 响应式调整 =====
+window.addEventListener('resize', function() {
+    if (radarChartDrawn) {
+        drawRadarChart();
+    }
+});
+
+// ===== 初始化 =====
+document.addEventListener('DOMContentLoaded', function() {
+    renderInspirationGrid();
+});
+</script>
+</body>
+</html>
